@@ -1,0 +1,68 @@
+{
+  "Comment": "Run Glue Job and start Crawler after successful completion",
+  "StartAt": "Glue StartJobRun",
+  "States": {
+    "Glue StartJobRun": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun",
+      "Parameters": {
+        "JobName": "spark-glue-etl-job"
+      },
+      "ResultPath": "$.GlueJobOutput",
+      "Next": "WaitForCompletion"
+    },
+    "WaitForCompletion": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:getJobRun",
+      "Parameters": {
+        "JobName": "spark-glue-etl-job",
+        "RunId.$": "$.GlueJobOutput.JobRunId"
+      },
+      "ResultPath": "$.JobRunDetails",
+      "Next": "Choice"
+    },
+    "Choice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.JobRunDetails.JobRun.JobRunState",
+          "StringEquals": "SUCCEEDED",
+          "Next": "StartCrawler"
+        },
+        {
+          "Variable": "$.JobRunDetails.JobRun.JobRunState",
+          "StringEquals": "FAILED",
+          "Next": "JobFailed"
+        }
+      ],
+      "Default": "JobInProgress"
+    },
+    "JobInProgress": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "WaitForCompletion"
+    },
+    "JobFailed": {
+      "Type": "Fail",
+      "Error": "GlueJobFailed",
+      "Cause": "The Glue job failed."
+    },
+    "StartCrawler": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "fine-data-crawler"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+      "Next": "SNS Publish"
+    },
+    "SNS Publish": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:<REGION>:<ACCOUNT_ID>5:FirstSNSTopic",
+        "Message.$": "$"
+      },
+      "End": true
+    }
+  }
+}
