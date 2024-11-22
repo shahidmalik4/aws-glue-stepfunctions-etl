@@ -33,25 +33,35 @@ dynamic_frame = glueContext.create_dynamic_frame.from_catalog(
 )
 
 # Convert to DataFrame for transformation
-data_frame = dynamic_frame.toDF()
+df = dynamic_frame.toDF()
 
 # Transformations
-# Select specific columns
-transformed_df = data_frame.select("id", "name", "host_id", "host_name")
+# Data Cleaning: Drop rows with null values in critical fields
+df_cleaned = df.dropna(subset=["host_id", "price", "latitude", "longitude"])
+
+# Type Casting
+df_cleaned = df_cleaned.withColumn("price", col("price").cast("float")) \
+                       .withColumn("bedrooms", col("bedrooms").cast("int")) \
+                       .withColumn("availability_365", col("availability_365").cast("int"))
+
+# Feature Engineering: Price per Bedroom
+df_transformed = df_cleaned.withColumn("price_per_bedroom", 
+                                       when(col("bedrooms") > 0, col("price") / col("bedrooms"))
+                                       .otherwise(None))
 
 # Convert DataFrame back to DynamicFrame
 transformed_dynamic_frame = DynamicFrame.fromDF(transformed_df, glueContext, "transformed_dynamic_frame")
 
 # ---- 1. Write Transformed Data to S3 ----
 # Define the S3 output path
-output_s3_path = "s3://sales-etl-bucket/cleanData/"
+output_s3_path = "<s3-bucket-uri>"
 
-# Write the transformed data back to S3 in CSV format
+# Write the transformed data back to S3 in parquet format
 glueContext.write_dynamic_frame.from_options(
     transformed_dynamic_frame,
     connection_type="s3",
     connection_options={"path": output_s3_path},  # Ensure a single path is provided
-    format="parquet"  # Change to 'parquet' if you want to use Parquet
+    format="parquet"  # Change to 'csv' if you want to use Parquet
 )
 
 # ---- End of ETL Logic ----
