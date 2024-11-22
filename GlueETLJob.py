@@ -24,8 +24,8 @@ job.init(args['JOB_NAME'], args)
 # 3. Write transformed data to S3 and store in Glue Catalog (processed data)
 
 # Read data from Glue Catalog (your raw CSV table)
-raw_database_name = 'main_raw_data'  # Replace with your raw data Glue database name
-raw_table_name = 'sales/rawData'     # Replace with your raw data Glue table name
+raw_database_name = 'raw_data_db'  # Replace with your raw data Glue database name
+raw_table_name = 'listings/rawData'     # Replace with your raw data Glue table name
 
 dynamic_frame = glueContext.create_dynamic_frame.from_catalog(
     database=raw_database_name, 
