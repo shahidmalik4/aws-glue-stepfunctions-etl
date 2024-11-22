@@ -1,0 +1,20 @@
+1: Average Price by Neighborhood
+
+SELECT neighbourhood_cleansed, AVG(price) as avg_price
+FROM transformed_data
+GROUP BY neighbourhood_cleansed
+ORDER BY avg_price DESC;
+
+2: Properties Available Year-round
+
+SELECT name, host_name, availability_365
+FROM transformed_data
+WHERE availability_365 = 365;
+
+3: Top Hosts by Number of Listings
+
+SELECT host_name, COUNT(*) as num_listings
+FROM transformed_data
+GROUP BY host_name
+ORDER BY num_listings DESC
+LIMIT 10;
